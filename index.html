@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1011">
+  <meta name="description" content="Аркадный сайд-скроллер о Сергее Михайловиче, отключении света в Бузулуке и одной очень большой видеокарте.">
+  <title>Сергеев: Свет есть</title>
+  <link rel="icon" type="image/png" href="./assets/story/icon.png">
+  <link rel="stylesheet" href="./styles/game.css">
+  <script type="module" src="./src/main.js"></script>
+</head>
+<body>
+  <main class="machine" data-screen="menu">
+    <section class="stage" id="stage" aria-label="Игровой экран">
+      <canvas id="game" width="960" height="540" tabindex="0" aria-label="Сергеев: Свет есть. Игровая область"></canvas>
+
+      <div id="hud" class="hud" hidden>
+        <div class="vitals">
+          <div class="meter-group">
+            <span class="hud-label">Броня</span>
+            <div class="life-meter" id="health" role="meter" aria-label="Броня" aria-valuemin="0" aria-valuemax="6" aria-valuenow="6"></div>
+          </div>
+          <div class="meter-group">
+            <span class="hud-label">Супер <b id="charge-caption">0%</b></span>
+            <div class="charge-track" id="charge" role="meter" aria-label="Заряд супер-атаки" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="charge-fill"></i></div>
+          </div>
+        </div>
+        <div class="hud-right">
+          <div class="objective">
+            <span class="hud-label">Задача</span>
+            <strong id="objective"></strong>
+            <div class="objective-track"><i id="route"></i></div>
+            <span class="lane-status" id="lane-status" hidden></span>
+          </div>
+          <button id="pause" class="icon-button" type="button" aria-label="Пауза" title="Пауза (Esc)"><span aria-hidden="true">Ⅱ</span></button>
+        </div>
+      </div>
+
+      <div id="boss-hud" class="boss-hud" hidden>
+        <span>ДЕМОН-КРАНОВЩИК</span>
+        <div class="boss-track"><i id="boss-fill"></i></div>
+      </div>
+      <div id="notification" class="notification" hidden><span id="notification-text"></span></div>
+      <div id="line" class="line" hidden><span id="line-speaker"></span><p id="line-text"></p></div>
+      <div id="interaction" class="interaction" hidden><kbd id="use-key">E</kbd><span id="interaction-text"></span></div>
+
+      <div id="overlay" class="overlay" data-screen="menu">
+        <div class="screen" id="screen-menu">
+          <div class="menu-back" aria-hidden="true"></div>
+          <div class="menu-atmosphere" aria-hidden="true"></div>
+          <img class="menu-hero" id="menu-hero" alt="">
+          <div class="menu-shade" aria-hidden="true"></div>
+          <div class="menu-copy">
+            <h1><img class="title-logo" id="menu-title-logo" alt="Сергеев: Свет есть"></h1>
+            <button id="play" class="button primary" type="button" disabled>Начать играть</button>
+            <p class="load-error" id="load-error" role="alert" hidden></p>
+          </div>
+        </div>
+
+        <div class="screen modal" id="screen-desktop-only" hidden>
+          <div class="panel desktop-panel">
+            <h2 id="desktop-only-title" tabindex="-1">Играть можно только на ПК</h2>
+            <p class="panel-text">Открой игру на компьютере.</p>
+          </div>
+        </div>
+
+        <div class="screen story" id="screen-story" hidden>
+          <div class="story-image" aria-hidden="true"></div>
+          <div class="story-atmosphere" aria-hidden="true"></div>
+          <div class="story-copy">
+            <p id="story-label" class="eyebrow"></p>
+            <h2 id="story-title"></h2>
+            <div id="story-body" class="story-body"></div>
+            <div class="buttons">
+              <button id="story-next" class="button primary" type="button">Дальше</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen modal" id="screen-tutorial" hidden>
+          <div class="panel tutorial-panel" role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
+            <h2 id="tutorial-title">Управление</h2>
+            <dl class="tutorial-keys">
+              <div><dt><kbd>←</kbd> <kbd>→</kbd> <span>/</span> <kbd>A</kbd> <kbd>D</kbd></dt><dd>Движение</dd></div>
+              <div><dt><kbd>↑</kbd> <kbd>↓</kbd> <span>/</span> <kbd>W</kbd> <kbd>S</kbd></dt><dd>Прицел и смена полосы</dd></div>
+              <div><dt><kbd>Пробел</kbd></dt><dd>Прыжок</dd></div>
+              <div><dt><kbd>↓</kbd> <span>/</span> <kbd>S</kbd></dt><dd>Спуск с платформы</dd></div>
+              <div><dt><kbd>J</kbd> <span>/</span> <kbd>ЛКМ</kbd></dt><dd>Огонь</dd></div>
+              <div><dt><kbd>K</kbd></dt><dd>Таунт</dd></div>
+              <div><dt><kbd>L</kbd></dt><dd>Суперзалп</dd></div>
+              <div><dt><kbd>E</kbd></dt><dd>Действие</dd></div>
+              <div><dt><kbd>Esc</kbd></dt><dd>Пауза</dd></div>
+            </dl>
+            <button id="tutorial-start" class="button primary" type="button">Нажмите пробел</button>
+          </div>
+        </div>
+
+        <div class="screen modal" id="screen-pause" hidden>
+          <div class="panel">
+            <p class="eyebrow">ИГРА ПРИОСТАНОВЛЕНА</p>
+            <h2>Пауза</h2>
+            <div class="buttons">
+              <button id="resume" class="button primary" type="button">Продолжить</button>
+              <button id="restart" class="button secondary" type="button">Начать миссию заново</button>
+            </div>
+            <button class="button subtle menu-return" type="button">В меню</button>
+          </div>
+        </div>
+
+        <div class="screen modal" id="screen-dead" hidden>
+          <div class="panel" tabindex="-1" id="dead-panel" aria-labelledby="dead-title">
+            <p id="dead-mission" class="eyebrow"></p>
+            <h2 id="dead-title">Связь потеряна</h2>
+            <p class="panel-text">Вернуться к последней контрольной точке.</p>
+            <div class="buttons">
+              <button id="retry" class="button primary" type="button">Повторить</button>
+              <button class="button secondary menu-return" type="button">В меню</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div id="scene-fade" class="scene-fade" aria-hidden="true"></div>
+      <div id="touch" class="touch-controls" aria-label="Сенсорное управление" hidden>
+        <div class="touch-directions">
+          <button type="button" data-input="left" aria-label="Влево">◂</button>
+          <div><button type="button" data-input="up" aria-label="Вверх">▴</button><button type="button" data-input="down" aria-label="Вниз">▾</button></div>
+          <button type="button" data-input="right" aria-label="Вправо">▸</button>
+        </div>
+        <div class="touch-actions">
+          <button type="button" data-input="taunt">Таунт</button>
+          <button type="button" data-input="use">Действие</button>
+          <button type="button" data-input="super">Супер</button>
+          <button type="button" data-input="jump">Прыжок</button>
+          <button type="button" class="touch-fire" data-input="fire">Огонь</button>
+        </div>
+      </div>
+    </section>
+    <noscript>Для игры нужен JavaScript.</noscript>
+  </main>
+</body>
+</html>
