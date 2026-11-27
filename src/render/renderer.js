@@ -1,4 +1,5 @@
 import {WIDTH, HEIGHT} from '../engine/geometry.js';
+import {ARENA_PIVOT, cameraPose} from '../mechanics/world/camera.js';
 import {drawBackdrop} from './backdrops.js';
 import {drawScenery, drawPickups, drawWarning, drawRideMarkers} from './scenery.js';
 import {drawBoss, drawEnemies, drawPlayer} from './actors.js';
@@ -17,15 +18,13 @@ export function createRenderer(canvas, art, reduceMotion = false) {
   return game => {
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     drawBackdrop(ctx, game, art);
-    const {x, y, shake} = game.camera;
-    const amplitude = reduceMotion ? 0 : shake;
+    const {x, y, roll} = cameraPose(game);
     ctx.save();
-    ctx.translate(-x + Math.sin(game.time * 76) * amplitude, -y + Math.cos(game.time * 89) * amplitude * .51);
-    if (game.boss && !game.flags.override && !reduceMotion) {
-      const roll = Math.sin(game.time * 1.53) * (game.boss.phase > 1 ? .023 : .008);
-      ctx.translate(480, 390);
+    ctx.translate(x, y);
+    if (roll) {
+      ctx.translate(ARENA_PIVOT.x, ARENA_PIVOT.y);
       ctx.rotate(roll);
-      ctx.translate(-480, -390);
+      ctx.translate(-ARENA_PIVOT.x, -ARENA_PIVOT.y);
     }
     drawScenery(ctx, game, art, reduceMotion);
     drawWarning(ctx, game);

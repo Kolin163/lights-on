@@ -22,6 +22,7 @@ const CROWN_HEIGHT = 106.5;
 
 const runHead = [329, 320, 330, 322];
 const runMuzzle = [[253, 443], [565, 424], [881, 446], [1195, 425]];
+const jumpMuzzle = [[252, 784], [563, 746], [866, 723], [1189, 772]];
 // Each entry is an entire ImageGen pose. The crown and sole align it with the original gait.
 const runUp = [
   [112, 36, 484, 588, 277, 59, 583, 455, 66],
@@ -84,18 +85,45 @@ export function playerPose(player, time) {
 }
 
 const aimGeometry = {
-  'aim-up-0': [102, 24, .24],
-  'aim-up-1': [95, 50, .24],
-  'aim-down-0': [122, 2, .274],
-  'aim-down-1': [112, 2, .274],
+  'aim-up-0': [247, 483, 102, 24, .24],
+  'aim-up-1': [265, 454, 95, 50, .24],
+  'aim-down-0': [265, 396, 122, 2, .274],
+  'aim-down-1': [265, 357, 112, 2, .274],
 };
 
-export function aimFrame(art, key) {
-  const image = art[key];
-  const [anchorX, crown, scale] = aimGeometry[key];
-  const anchorY = image.naturalHeight - 2;
+export function aimFrame(key) {
+  const [width, height, anchorX, crown, scale] = aimGeometry[key];
+  const anchorY = height - 2;
   return {
-    sheet: key, left: 0, top: 0, right: image.naturalWidth, bottom: image.naturalHeight,
+    sheet: key, left: 0, top: 0, right: width, bottom: height,
     anchorX, anchorY, scale, scaleY: CROWN_HEIGHT / (anchorY - crown),
   };
+}
+
+function weaponFrame(frame, muzzle, barrelAngle = 0) {
+  const scaleY = frame.scaleY ?? frame.scale;
+  const restAngle = Math.atan2(Math.sin(barrelAngle) * scaleY, Math.cos(barrelAngle) * frame.scale);
+  const muzzleX = (muzzle[0] - frame.anchorX) * frame.scale;
+  const muzzleY = (muzzle[1] - frame.anchorY) * scaleY;
+  const length = 34;
+  return {
+    frame, restAngle, muzzleY, length,
+    gripX: muzzleX - length * Math.cos(restAngle),
+    gripY: muzzleY - length * Math.sin(restAngle),
+  };
+}
+
+export function mouseAimFrame(player, angle) {
+  if (player.grounded && player.moving) {
+    const raised = angle < -.44;
+    const frame = runningFrame(player.walkTime, raised);
+    return weaponFrame(frame, frame.muzzle, raised ? -.89 : 0);
+  }
+  if (angle < -.44) return weaponFrame(aimFrame('aim-up-0'), [230, 21], -.89);
+  if (angle > .30) return weaponFrame(aimFrame('aim-down-0'), [247, 246], .58);
+  if (!player.grounded) {
+    const col = player.jumpAge < .07 ? 0 : player.vy < -190 ? 1 : player.vy > 140 ? 3 : 2;
+    return weaponFrame(heroFrame(2, col), jumpMuzzle[col], col > 1 ? -.06 : 0);
+  }
+  return weaponFrame(heroFrame(3, 0), [249, 1078]);
 }

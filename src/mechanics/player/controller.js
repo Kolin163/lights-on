@@ -1,7 +1,9 @@
 import {approach} from '../../engine/geometry.js';
 import {findSurface, stayInWorld} from '../world/platforms.js';
+import {screenToWorld} from '../world/camera.js';
 import {launchBolt, releaseSuper, provoke} from '../combat/combat.js';
 import {HERO_NAME} from '../../levels/catalog.js';
+import {mouseAim} from './aim.js';
 
 import {MAX_ARMOR} from './health.js';
 const GRAVITY = 1190;
@@ -25,9 +27,9 @@ export function updatePlayerTimers(player, dt) {
   }
 }
 
-function direction(game, input, bike, axis) {
+function keyboardAim(game, input, axis) {
   const player = game.player;
-  if (bike || (!input.down('up') && !input.down('down'))) return {x: player.face, y: 0};
+  if (!input.down('up') && !input.down('down')) return {x: player.face, y: 0};
   if (input.down('down') && player.grounded) return {x: player.face, y: 0};
   const x = axis ? .71 : .30;
   const aim = {x: player.face * x, y: Math.sqrt(1 - x * x) * (input.down('up') ? -1 : 1)};
@@ -85,8 +87,9 @@ export function updateAttacks(game, input, dt, axis = 0, bike = false) {
     }
   }
 
-  if (!input.down('fire') || player.cooldown || player.tauntTime || player.superTime) return;
-  player.shotDirection = direction(game, input, bike, axis);
+  const fire = input.tap('fire') || input.down('fire');
+  if (!fire || player.cooldown || player.tauntTime || player.superTime) return;
+  player.shotDirection = bike ? {x: player.face, y: 0} : player.aim ?? keyboardAim(game, input, axis);
   player.cooldown = bike ? .162 : .148;
   player.recoil = .14;
   launchBolt(game, player.shotDirection);
@@ -165,7 +168,16 @@ export function updatePlayer(game, input, dt) {
       game.sound('boot-' + material);
     }
   }
-  player.aim = direction(game, input, false, axis);
+  const pointer = input.pointer?.();
+  if (pointer && !locked && !player.hurtTime) {
+    const moving = Boolean(axis) || player.moving;
+    const target = screenToWorld(game, pointer);
+    const dx = target.x - player.x;
+    if (!moving && Math.abs(dx) > 3) player.face = Math.sign(dx);
+    player.aim = mouseAim(player, target, moving);
+  } else {
+    player.aim = keyboardAim(game, input, axis);
+  }
   updateAttacks(game, input, dt, axis);
 
   if (player.y > game.layout.height + 85) game.fail();

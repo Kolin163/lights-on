@@ -1,6 +1,7 @@
 import {body, traceBox, WIDTH, HEIGHT} from '../../engine/geometry.js';
 import {receiveDamage} from '../player/health.js';
 import {hitBoss, bossTarget} from '../boss/encounter.js';
+import {aimMuzzle} from '../player/aim.js';
 
 export function launchBolt(game, direction) {
   const p = game.player;
@@ -9,8 +10,9 @@ export function launchBolt(game, direction) {
   const aimY = motor ? 0 : direction.y;
   const steep = Math.abs(direction.y) > .56;
   const reach = steep ? 42 : 45;
-  const x = p.x + aimX * (motor ? 54 : reach);
-  const y = motor ? p.y - 113 : p.y - 55 + aimY * reach;
+  const muzzle = !motor && direction.pose ? aimMuzzle(direction) : null;
+  const x = p.x + (muzzle ? p.face * muzzle.x : aimX * (motor ? 54 : reach));
+  const y = p.y + (muzzle ? muzzle.y : motor ? -113 : -55 + aimY * reach);
   const speed = (motor ? game.ride.speed : 0) + 975;
   game.projectiles.push({
     owner: 'player', x, y, vx: speed * aimX, vy: speed * aimY,

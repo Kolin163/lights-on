@@ -50,6 +50,9 @@ export function createInterface({onPlay, onResume, onPause, onTutorial, onRestar
   const pause = byId('pause');
   const fade = byId('scene-fade');
   const storyNext = byId('story-next');
+  const storyLoad = byId('story-load');
+  const storyLoadText = byId('story-load-text');
+  const storyProgress = byId('story-progress');
   const tutorialStart = byId('tutorial-start');
   const touchMode = matchMedia('(pointer: coarse)').matches;
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -78,8 +81,10 @@ export function createInterface({onPlay, onResume, onPause, onTutorial, onRestar
     if (focus) focus.focus({preventScroll: true});
   }
 
-  function beginStory({label, title, text, quote, art, action, onNext}) {
-    closeStory = onNext;
+  function beginStory({label, title, text, quote, art, action, prepare, onNext}) {
+    closeStory = prepare ? null : onNext;
+    storyNext.disabled = Boolean(prepare);
+    storyLoad.hidden = true;
     setText(byId('story-label'), label);
     setText(byId('story-title'), title);
     setText(storyNext, action);
@@ -97,7 +102,39 @@ export function createInterface({onPlay, onResume, onPause, onTutorial, onRestar
     byId('story-body').replaceChildren(...paragraphs);
     screens.story.dataset.art = art;
     screens.story.style.setProperty('--scene-image', "url('" + storyUrl(art) + "')");
-    show('story', storyNext);
+    show('story', prepare ? null : storyNext);
+    if (prepare) loadScene(prepare, action, onNext);
+  }
+
+  function loadScene(prepare, action, onNext) {
+    storyNext.disabled = true;
+    setText(storyNext, action);
+    storyLoad.dataset.state = 'loading';
+    setText(storyLoadText, 'Загрузка миссии…');
+    storyProgress.value = 0;
+    storyProgress.hidden = false;
+    storyLoad.hidden = false;
+
+    let loading = true;
+    function enableAction(label, next) {
+      loading = false;
+      closeStory = next;
+      setText(storyNext, label);
+      storyNext.disabled = false;
+      storyNext.focus({preventScroll: true});
+    }
+    prepare(progress => {
+      if (loading) storyProgress.value = progress;
+    }).then(() => {
+      storyLoad.hidden = true;
+      enableAction(action, onNext);
+    }, error => {
+      console.warn('Не загрузился ресурс миссии', error);
+      storyLoad.dataset.state = 'error';
+      setText(storyLoadText, 'Не удалось загрузить ресурсы миссии.');
+      storyProgress.hidden = true;
+      enableAction('Повторить загрузку', () => loadScene(prepare, action, onNext));
+    });
   }
 
   function dismissStory() {
@@ -193,23 +230,16 @@ export function createInterface({onPlay, onResume, onPause, onTutorial, onRestar
       screens.menu.style.setProperty('--menu-image', "url('" + assetUrl('menu-back') + "')");
       byId('menu-hero').src = assetUrl('menu-hero');
       byId('menu-title-logo').src = assetUrl('menu-logo');
+      play.disabled = false;
+      showMenu();
     },
     desktopOnly() {
       canvas.hidden = true;
       show('desktop-only', byId('desktop-only-title'));
     },
-    loaded() {
-      play.disabled = false;
-      showMenu();
-    },
-    loadFailed(path) {
-      setText(play, 'Игра недоступна');
-      const error = byId('load-error');
-      error.hidden = false;
-      setText(error, 'Не удалось загрузить ' + path + '. Обнови страницу.');
-    },
     playing(game) {
       stage.classList.toggle('is-boss', Boolean(game.boss));
+      stage.classList.toggle('is-bike', Boolean(game.ride));
       show('playing', canvas);
       paintHUD(game);
     },

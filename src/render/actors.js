@@ -1,9 +1,11 @@
 import {WIDTH, HEIGHT} from '../engine/geometry.js';
 import {aimFrame, heroFrame, playerPose, runningFrame} from '../mechanics/player/animation.js';
+import {aimMuzzle} from '../mechanics/player/aim.js';
 import {enemyPose} from '../mechanics/combat/enemies.js';
 import {bossPose} from '../mechanics/boss/animation.js';
 import {floorShadow, glow} from './drawing.js';
 import {drawBike} from './bike.js';
+import {drawAimedHero} from './player-aim.js';
 
 function drawFrame(ctx, art, frame) {
   const w = frame.right - frame.left;
@@ -14,13 +16,10 @@ function drawFrame(ctx, art, frame) {
     (frame.left - frame.anchorX) * scale, (frame.top - frame.anchorY) * scaleY, w * scale, h * scaleY);
 }
 
-function runFlash(ctx, art, frame, aimUp, recoil) {
-  const [sourceX, sourceY] = frame.muzzle;
-  const x = (sourceX - frame.anchorX) * frame.scale;
-  const y = (sourceY - frame.anchorY) * frame.scaleY;
+function muzzleFlash(ctx, art, x, y, angle, recoil) {
   ctx.save();
   ctx.translate(x, y);
-  if (aimUp) ctx.rotate(-Math.PI / 4);
+  ctx.rotate(angle);
   ctx.globalAlpha *= (recoil - .105) / .035;
   glow(ctx, 6, 0, 16, '#ffb04990');
   ctx.drawImage(art.impact, -3, -8, 23, 16);
@@ -48,20 +47,31 @@ export function drawPlayer(ctx, game, art, reduceMotion) {
     return;
   }
   if (p.superTime > .36) glow(ctx, p.x + p.face * 56, p.y - 57, 90, '#fc853b8a', (1 - p.superTime) * 1.7);
-  const aim = p.recoil > 0 ? p.shotDirection : p.aim;
+  const aim = p.aim?.pose || !p.recoil ? p.aim : p.shotDirection;
   const canAim = !p.hurtTime && !p.tauntTime && !p.superTime;
   const angled = canAim && aim && Math.abs(aim.y) > .56;
   const [row, col] = playerPose(p, game.time);
   ctx.translate(p.x, p.y);
   if (p.face < 0) ctx.scale(-1, 1);
-  if (canAim && p.moving && p.grounded && (row === 1 || p.recoil > 0 || angled)) {
+  if (canAim && aim?.pose) {
+    drawAimedHero(ctx, art, aim);
+    if (p.recoil > .105) {
+      const {x, y} = aimMuzzle(aim);
+      muzzleFlash(ctx, art, x, y, aim.angle, p.recoil);
+    }
+  } else if (canAim && p.moving && p.grounded && (row === 1 || p.recoil > 0 || angled)) {
     const aimUp = angled && aim.y < 0;
     const frame = runningFrame(p.walkTime, aimUp);
     drawFrame(ctx, art, frame);
-    if (p.recoil > .105) runFlash(ctx, art, frame, aimUp, p.recoil);
+    if (p.recoil > .105) {
+      const [sourceX, sourceY] = frame.muzzle;
+      const x = (sourceX - frame.anchorX) * frame.scale;
+      const y = (sourceY - frame.anchorY) * frame.scaleY;
+      muzzleFlash(ctx, art, x, y, aimUp ? -Math.PI / 4 : 0, p.recoil);
+    }
   } else {
     const frame = angled
-      ? aimFrame(art, 'aim-' + (aim.y < 0 ? 'up-' : 'down-') + Number(p.recoil > .09))
+      ? aimFrame('aim-' + (aim.y < 0 ? 'up-' : 'down-') + Number(p.recoil > .09))
       : heroFrame(row, col);
     drawFrame(ctx, art, frame);
   }

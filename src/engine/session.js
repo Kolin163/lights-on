@@ -13,11 +13,12 @@ import {restoreObjectives, updateObjectives} from '../mechanics/world/objectives
 export const STEP = 1 / 120;
 
 export class GameSession {
-  constructor({onComplete, onFail, onSound = () => {}, touch = false}) {
+  constructor({onComplete, onFail, onSound = () => {}, touch = false, reduceMotion = false}) {
     this.status = 'menu';
     this.index = 0;
     this.tauntHistory = [];
     this.touch = touch;
+    this.reduceMotion = reduceMotion;
     this.onComplete = onComplete;
     this.onFail = onFail;
     this.sound = onSound;

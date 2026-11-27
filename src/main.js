@@ -3,11 +3,14 @@ import {GameSession, STEP} from './engine/session.js';
 import {createGameAudio} from './audio/mixer.js';
 import {playGameCue, updateAmbience} from './audio/scene.js';
 import {MISSIONS} from './levels/catalog.js';
-import {loadArt} from './render/assets.js';
+import {LAYOUTS} from './levels/layouts.js';
+import {loadMissionArt} from './render/assets.js';
 import {createRenderer} from './render/renderer.js';
 import {createInterface, isNonDesktopDevice} from './ui/interface.js';
 
 const audio = createGameAudio();
+const art = {};
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const missionTheme = index => index === MISSIONS.length - 1 ? 'on-the-cables' : 'livewire';
 
 function playTitleMusic() {
@@ -40,6 +43,10 @@ function intro(index, carriedCharge = 0) {
     art: mission.art,
     label: 'МИССИЯ ' + String(index + 1).padStart(2, '0') + ' · ' + mission.location,
     action: storyActions[index],
+    prepare: async progress => {
+      const images = await loadMissionArt(LAYOUTS[index].setting, progress);
+      Object.assign(art, images);
+    },
     onNext: () => launch(index, false, carriedCharge, index === 0),
   });
 }
@@ -52,6 +59,8 @@ function launch(index, retry = false, carriedCharge = 0, showControls = false) {
   machine.start(index, retry, carriedCharge);
   if (showControls) {
     machine.status = 'tutorial';
+    audio.preload('livewire', 'portal-rumble');
+    audio.preloadEffects();
     ui.tutorial();
   } else {
     audio.setMusic(missionTheme(index), .29);
@@ -114,8 +123,6 @@ const ui = createInterface({
     machine.tauntHistory.length = 0;
     intro(0);
     audio.play('interface-confirm');
-    audio.preload('livewire', 'portal-rumble');
-    audio.preloadEffects();
   },
   onPause: pause,
   onTutorial: dismissTutorial,
@@ -125,6 +132,7 @@ const ui = createInterface({
 });
 const machine = new GameSession({
   touch: ui.touchMode,
+  reduceMotion,
   onComplete: completed,
   onSound: (id, x, y) => playGameCue(audio, machine, id, x, y),
   onFail: index => {
@@ -174,13 +182,8 @@ if (isNonDesktopDevice(navigator)) {
   audio.setHidden(document.hidden);
   document.addEventListener('click', enableTitleMusic);
   document.addEventListener('keydown', enableTitleMusic);
+  render = createRenderer(ui.canvas, art, reduceMotion);
   ui.prepareMenu();
-  loadArt().then(art => {
-    render = createRenderer(ui.canvas, art, matchMedia('(prefers-reduced-motion: reduce)').matches);
-    ui.loaded();
-    playTitleMusic();
-    requestAnimationFrame(frame);
-  }).catch(error => {
-    ui.loadFailed(error.message);
-  });
+  playTitleMusic();
+  requestAnimationFrame(frame);
 }

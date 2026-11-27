@@ -54,7 +54,6 @@
           <div class="menu-copy">
             <h1><img class="title-logo" id="menu-title-logo" alt="Сергеев: Свет есть"></h1>
             <button id="play" class="button primary" type="button" disabled>Начать играть</button>
-            <p class="load-error" id="load-error" role="alert" hidden></p>
           </div>
         </div>
 
@@ -74,6 +73,10 @@
             <div id="story-body" class="story-body"></div>
             <div class="buttons">
               <button id="story-next" class="button primary" type="button">Дальше</button>
+              <div class="story-load" id="story-load" hidden>
+                <span id="story-load-text" role="status"></span>
+                <progress id="story-progress" max="1" value="0" aria-label="Загрузка миссии"></progress>
+              </div>
             </div>
           </div>
         </div>
@@ -83,7 +86,8 @@
             <h2 id="tutorial-title">Управление</h2>
             <dl class="tutorial-keys">
               <div><dt><kbd>←</kbd> <kbd>→</kbd> <span>/</span> <kbd>A</kbd> <kbd>D</kbd></dt><dd>Движение</dd></div>
-              <div><dt><kbd>↑</kbd> <kbd>↓</kbd> <span>/</span> <kbd>W</kbd> <kbd>S</kbd></dt><dd>Прицел и смена полосы</dd></div>
+              <div><dt><kbd>↑</kbd> <kbd>↓</kbd> <span>/</span> <kbd>W</kbd> <kbd>S</kbd></dt><dd>Полосы на велосипеде</dd></div>
+              <div><dt><kbd>Мышь</kbd></dt><dd>Прицеливание пешком</dd></div>
               <div><dt><kbd>Пробел</kbd></dt><dd>Прыжок</dd></div>
               <div><dt><kbd>↓</kbd> <span>/</span> <kbd>S</kbd></dt><dd>Спуск с платформы</dd></div>
               <div><dt><kbd>J</kbd> <span>/</span> <kbd>ЛКМ</kbd></dt><dd>Огонь</dd></div>

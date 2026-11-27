@@ -1,3 +1,5 @@
+import {clamp, HEIGHT, WIDTH} from './geometry.js';
+
 const actions = {
   ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right',
@@ -15,6 +17,8 @@ export function createInput(surface, touchControls, onPause, isPlaying) {
   const pressed = new Set();
   const holds = new Map();
   const awaitingRelease = new Set();
+  let cursor = null;
+  let pointing = null;
 
   function press(id, action) {
     if (keys.has(id)) return;
@@ -38,6 +42,8 @@ export function createInput(surface, touchControls, onPause, isPlaying) {
     keys.clear();
     holds.clear();
     pressed.clear();
+    cursor = null;
+    pointing = null;
     touchControls.querySelectorAll('.held').forEach(button => button.classList.remove('held'));
   }
 
@@ -65,8 +71,28 @@ export function createInput(surface, touchControls, onPause, isPlaying) {
   });
   window.addEventListener('blur', reset);
 
+  function mapCursor() {
+    if (!cursor) return;
+    const bounds = surface.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+    pointing = {
+      x: clamp((cursor.x - bounds.left) / bounds.width, 0, 1) * WIDTH,
+      y: clamp((cursor.y - bounds.top) / bounds.height, 0, 1) * HEIGHT,
+    };
+  }
+
+  function recordCursor(event) {
+    if (event.pointerType === 'touch' || !isPlaying()) return;
+    cursor = {x: event.clientX, y: event.clientY};
+    mapCursor();
+  }
+
+  surface.addEventListener('pointermove', recordCursor);
+  surface.addEventListener('pointerleave', () => { cursor = pointing = null; });
+  window.addEventListener('resize', mapCursor);
   surface.addEventListener('pointerdown', event => {
     if (event.button !== 0 || !isPlaying() || event.pointerType === 'touch') return;
+    recordCursor(event);
     surface.focus({preventScroll: true});
     surface.setPointerCapture(event.pointerId);
     press(event.pointerId, 'fire');
@@ -95,6 +121,7 @@ export function createInput(surface, touchControls, onPause, isPlaying) {
   return {
     down: action => holds.has(action),
     tap: action => pressed.delete(action),
+    pointer: () => pointing,
     finishStep: () => pressed.clear(),
     reset,
   };
